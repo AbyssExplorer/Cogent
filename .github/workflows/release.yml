@@ -1,0 +1,186 @@
+name: Build and Release Cogent
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build Cogent
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        goos: [darwin, linux, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          - os: windows-latest
+            goos: windows
+            goarch: arm64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24' 
+        
+    - name: Build Cogent
+      run: |
+        go build -ldflags="-s -w" -o cogent${{ (eq matrix.goos 'windows') && '.exe' || '' }} ./
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: cogent-builds-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: cogent${{ (eq matrix.goos 'windows') && '.exe' || '' }}
+
+  build-macos-universal:
+    name: Build Cogent (macOS Universal)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build Cogent for amd64
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o cogent ./
+
+      - name: Build Cogent for arm64
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o cogent ./
+
+      - name: Create Universal Binary
+        run: |
+          mkdir -p build
+          lipo -create -output build/cogent cogent cogent # lipo can take the same input multiple times for different architectures
+          mv build/cogent cogent-darwin-universal
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cogent-builds-darwin-universal
+          path: cogent-darwin-universal
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, build-macos-universal]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        path: builds
+
+      - name: Package Builds
+        run: |
+          cd builds
+          mkdir cogent-release
+          mv cogent-builds-darwin-amd64/cogent cogent-release/cogent-darwin-amd64
+          mv cogent-builds-darwin-arm64/cogent cogent-release/cogent-darwin-arm64
+          mv cogent-builds-darwin-universal/cogent-darwin-universal cogent-release/cogent-darwin-universal
+          mv cogent-builds-linux-amd64/cogent cogent-release/cogent-linux-amd64
+          mv cogent-builds-linux-arm64/cogent cogent-release/cogent-linux-arm64
+          mv cogent-builds-windows-amd64/cogent.exe cogent-release/cogent-windows-amd64.exe
+          mv cogent-builds-windows-arm64/cogent.exe cogent-release/cogent-windows-arm64.exe
+
+          zip cogent-darwin-amd64.zip cogent-release/cogent-darwin-amd64
+          zip cogent-darwin-arm64.zip cogent-release/cogent-darwin-arm64
+          zip cogent-darwin-universal.zip cogent-release/cogent-darwin-universal
+          zip cogent-linux-amd64.zip cogent-release/cogent-linux-amd64
+          zip cogent-linux-arm64.zip cogent-release/cogent-linux-arm64
+          zip cogent-windows-amd64.zip cogent-release/cogent-windows-amd64.exe
+          zip cogent-windows-arm64.zip cogent-release/cogent-windows-arm64.exe
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: builds/cogent-darwin-amd64.zip
+          asset_name: cogent-darwin-amd64.zip
+          asset_content_type: application/zip
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: builds/cogent-darwin-arm64.zip
+          asset_name: cogent-darwin-arm64.zip
+          asset_content_type: application/zip
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: builds/cogent-darwin-universal.zip
+          asset_name: cogent-darwin-universal.zip
+          asset_content_type: application/zip
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: builds/cogent-linux-amd64.zip
+          asset_name: cogent-linux-amd64.zip
+          asset_content_type: application/zip
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: builds/cogent-linux-arm64.zip
+          asset_name: cogent-linux-arm64.zip
+          asset_content_type: application/zip
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: builds/cogent-windows-amd64.zip
+          asset_name: cogent-windows-amd64.zip
+          asset_content_type: application/zip
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: builds/cogent-windows-arm64.zip
+          asset_name: cogent-windows-arm64.zip
+          asset_content_type: application/zip
