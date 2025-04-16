@@ -14,23 +14,14 @@ builds:
       - "-s -w"
     env:
       - CGO_ENABLED=0
-    mod_timestamp: "{{ .CommitTimestamp.Format \"2006-01-02T15:04:05Z07:00\" }}"
 archives:
   - id: default
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip
 checksum:
   algorithm: sha256
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
-changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
 release:
   github:
     owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
