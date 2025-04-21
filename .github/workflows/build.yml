@@ -21,6 +21,6 @@ jobs:
 
     - name: Build & Test
       run: |
-        apt-get update && apt-get upgrade -y
-        apt-get install libx11-dev
+        sudo apt-get update && apt-get upgrade -y
+        sudo apt-get install libx11-dev -y
         go build -o cogent . && cogent -testcheck true
