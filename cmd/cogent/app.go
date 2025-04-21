@@ -13,9 +13,17 @@ import (
 
 func Execute() error {
 
+	var health bool
+	flag.BoolVar(&health, "testcheck", false, "Perform health check")
+
 	var region string
 	flag.StringVar(&region, "region", "us-east-1", "AWS Region to use")
 	flag.Parse()
+
+	if health {
+		fmt.Println("I am OK!")
+		return nil
+	}
 
 	ctx := context.Background()
 	conf, err := cognito.LoadAWSConfig(ctx, region)
