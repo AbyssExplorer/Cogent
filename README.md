@@ -3,7 +3,7 @@
 A simple CLI for generating client credentials tokens for AWS Cognito App Clients
 
 ## Download
-> If Go is not installed (current: ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/AbyssExplorer/Cogent/total))
+> Manually, If Go is not installed (current: ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/AbyssExplorer/Cogent/total))
 1. Download executable from [release page](https://github.com/AbyssExplorer/Cogent/releases/), copy it into a folder.
 2. Add the folder path in environment variable for easy access.
 > Using go install
