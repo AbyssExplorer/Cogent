@@ -20,4 +20,7 @@ jobs:
         go-version: '1.24' 
 
     - name: Build & Test
-      run: go build -o cogent . && cogent -testcheck true
+      run: |
+        apt-get update && apt-get upgrade -y
+        apt-get install libx11-dev
+        go build -o cogent . && cogent -testcheck true
