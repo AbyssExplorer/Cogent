@@ -8,6 +8,7 @@ import (
 	"github.com/AbyssExplorer/Cogent/internal/auth"
 	"github.com/AbyssExplorer/Cogent/internal/cognito"
 	"github.com/AbyssExplorer/Cogent/internal/prompt"
+	"github.com/AbyssExplorer/Cogent/internal/sysutils"
 )
 
 func Execute() error {
@@ -58,5 +59,9 @@ func Execute() error {
 	}
 	fmt.Println("Generated Client Credentials JWT Token:")
 	fmt.Println(token)
+
+	sysutils.CopyToClipboard(token)
+	fmt.Println("\nToken copied to clipboard.")
+
 	return nil
 }
